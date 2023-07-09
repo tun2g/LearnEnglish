@@ -6,7 +6,7 @@ const AuthController = {
     generateAccessToken: (user,time="1800s") => {
         return JWT.sign(
             {
-                id: user._id,
+                _id: user._id,
             },
             process.env.JWT_ACCESS_KEY,
             { expiresIn: time }
@@ -16,7 +16,7 @@ const AuthController = {
     generateRefreshToken: (user) => {
         return JWT.sign(
             {
-                id: user._id,
+                _id: user._id,
             },
             process.env.JWT_REFRESH_KEY,
             { expiresIn: "30d" }
@@ -24,36 +24,35 @@ const AuthController = {
     },
 
     requestRefreshToken: async (req, res, next) => {
-        let refreshTokens= await redis.lRange('refresh-tokens', 0, -1, (err, reply) => {
-            if (err) throw err;
-            return reply; // danh sách các phần tử trong mảng
-        })
-        const refreshToken = req.cookies.refreshtoken;
-
-        if (!refreshToken) {
-            return res.json("Bạn không có quyền truy cập");
-        }
-        if (!refreshTokens.includes(refreshToken)) {
-            return res.json("Refresh token không tồn tại hoặc hết hạn!");
-        }
-        const email =await redis.get(refreshToken)
-        
-        JWT.verify(refreshToken, process.env.JWT_REFRESH_KEY, async(err, user) => {
-            if (err) {
-                return res.status(200).json(err);
+        try {
+            const refreshToken = req.cookies.refreshtoken;
+    
+            if (!refreshToken) {
+                return res.status(403).json("Bạn không có quyền truy cập");
             }
+    
             
-            res.cookie("email",email,{
-                path: "/",
-                maxAge:1000*process.env.JWT_ACCESS_KEY_TIME,
-                httpOnly: true,
-                secure: true,
-                sameSite: 'strict',
-            })
-            const newAccessToken = AuthController.generateAccessToken(user);
+            JWT.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
+                if (err) {
+                    return res.status(200).json(err);
+                }
+                const newAccessToken = AuthController.generateAccessToken(user);
+                
+                res.cookie("accesstoken",newAccessToken,{
+                    path: "/",
+                    maxAge:1000*60*5,
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'strict',
+                })
+                
+                res.status(200).json({ accessToken: newAccessToken});
+            });
             
-            res.status(200).json({ accessToken: newAccessToken,email});
-        });
+        } catch (error) {
+            console.log(error)
+            next(error)
+        }
     },
 
     login:async(req,res,next)=>{
@@ -71,12 +70,39 @@ const AuthController = {
 
             const isRightPassword = await isValidUser.isRightPassword(password)
 
+
+
             if(!isRightPassword){
                 return res.status(500).json({
                     status:500,
                     message:"Tài khoản hoặc mật khẩu không đúng"
                 })
             }
+
+            const accessToken = AuthController.generateAccessToken(isValidUser)
+            const refreshToken = AuthController.generateRefreshToken(isValidUser)
+
+            res.cookie("refreshtoken", refreshToken,{
+                path: "/",
+                maxAge:1000*60*60*24*30,
+                httpOnly: true,
+                secure: true,
+                sameSite: 'strict',
+            })
+            res.cookie("accesstoken", accessToken,{
+                path: "/",
+                maxAge:1000*60*30,
+                httpOnly: true,
+                secure: true,
+                sameSite: 'strict',
+            })
+
+            res.cookie("userid",isValidUser._id,{
+                path:'*',
+                httpOnly:true,
+                secure:true,
+                sameSite:'strict'
+            })
 
             res.status(200).json({
                 status:200,
@@ -119,6 +145,17 @@ const AuthController = {
             })
             
 
+        } catch (error) {
+            next(error)
+            console.log(error)
+        }
+    },
+    check:async(req,res,next)=>{
+        try {
+            return res.status(200).json({
+                status:200,
+                message:"Oke"
+            })
         } catch (error) {
             next(error)
             console.log(error)

@@ -1,5 +1,7 @@
 const router = require("express").Router();
-const volcabController = require('../controllers/volcab.c')
+const volcabController = require('../../controllers/volcab.c')
+
+const jwtMiddleware = require('../../middlewares/jwt.m')
 
 router.post('/create',volcabController.addNew)
 
@@ -9,7 +11,7 @@ router.put('/update/:user',volcabController.update)
 
 router.delete('/delete',volcabController.deleteByUser)
 
-router.get('/get-all',volcabController.getAll)
+router.get('/get-all',jwtMiddleware.authenticateToken,volcabController.getAll)
 
 router.get('/get-pag',volcabController.getPagination)
 
