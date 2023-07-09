@@ -4,7 +4,7 @@ import classNames from "classnames/bind";
 const cx = classNames.bind(styles);
 
 function Header() {
-    return <></>;
+    return <>Header</>;
 }
 
 export default Header;

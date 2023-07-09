@@ -1,7 +1,7 @@
 const routes = (app) => {
-    app.use("/v1/volcab", require("./volcab.router"));
-    app.use("/v1/user",require("./user.router"))
-    app.use("/v1/auth",require("./auth.router"))
+    app.use("/v1/api/volcab", require("./volcab.router"));
+    app.use("/v1/api/user",require("./user.router"))
+    app.use("/v1/api/auth",require("./auth.router"))
 };
 
 module.exports = routes;

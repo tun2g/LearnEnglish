@@ -1,5 +1,5 @@
 const corsConfig={
-    origin: '*',
+    origin: process.env.CLIENT_API,
     exposedHeaders: 'Authorization',
     credentials: true,
 }
